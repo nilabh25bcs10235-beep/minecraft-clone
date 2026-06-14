@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minecraft 3D - AI Powered (Fusion)</title>
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #000; color: white; font-family: system-ui; }
@@ -111,6 +112,15 @@
     </div>
 
     <script>
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker registered'))
+                    .catch(err => console.log('SW registration failed'));
+            });
+        }
+
         // ==================== THREE.JS SETUP ====================
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -330,14 +340,12 @@
             document.getElementById('api-key-section').style.display = 'block';
             document.getElementById('ui').style.display = 'flex';
 
-            // Load saved key
             const savedKey = localStorage.getItem('openrouter_api_key');
             if (savedKey) document.getElementById('api-key').value = savedKey;
 
             animate();
         }
 
-        // Auto-load key if exists (for when refreshing after tutorial)
         window.onload = () => {
             const saved = localStorage.getItem('openrouter_api_key');
             if (saved) document.getElementById('api-key').value = saved;
