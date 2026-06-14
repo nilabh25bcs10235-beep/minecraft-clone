@@ -38,6 +38,8 @@ function App() {
   };
 
   useEffect(() => {
+    if (!mountRef.current) return;
+
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
@@ -46,7 +48,7 @@ function App() {
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     rendererRef.current = renderer;
     mountRef.current.appendChild(renderer.domElement);
 
@@ -83,31 +85,34 @@ function App() {
         }
       }
     };
-
     createTerrain();
 
-    // Simple 3D Girl Companion
+    // 3D Girl Companion
     const createGirl = () => {
       const group = new THREE.Group();
       const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.6, 0.6), new THREE.MeshLambertMaterial({ color: 0xff69b4 }));
       body.position.y = 1.6;
       group.add(body);
 
-      const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), new THREE.MeshLambertMaterial({ color: 0x4a2c0a }));
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), new THREE.MeshLambertMaterial({ color: 0xffdbac }));
+      head.position.y = 3;
+      group.add(head);
+
+      const hair = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7, 0.9), new THREE.MeshLambertMaterial({ color: 0x4a2c0a }));
       hair.position.y = 3.3;
       group.add(hair);
 
-      group.position.set(8, 2, 8);
+      group.position.set(10, 2, 10);
       scene.add(group);
       return group;
     };
     createGirl();
 
-    camera.position.set(0, 10, 25);
+    camera.position.set(0, 12, 30);
 
     // Controls
-    const handleKeyDown = (e) => keysRef.current[e.key.toLowerCase()] = true;
-    const handleKeyUp = (e) => keysRef.current[e.key.toLowerCase()] = false;
+    const handleKeyDown = (e) => { keysRef.current[e.key.toLowerCase()] = true; };
+    const handleKeyUp = (e) => { keysRef.current[e.key.toLowerCase()] = false; };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
@@ -139,10 +144,10 @@ function App() {
       const intersects = raycaster.intersectObjects(blocksRef.current);
       if (intersects.length > 0) {
         const hit = intersects[0];
-        if (e.button === 0) {
+        if (e.button === 0) { // Break
           scene.remove(hit.object);
           blocksRef.current = blocksRef.current.filter(b => b !== hit.object);
-        } else if (e.button === 2) {
+        } else if (e.button === 2) { // Place
           const pos = hit.object.position.clone().add(hit.face.normal);
           const newBlock = new THREE.Mesh(
             new THREE.BoxGeometry(1, 1, 1),
@@ -158,6 +163,7 @@ function App() {
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('contextmenu', e => e.preventDefault());
 
+    // Resize handler
     const handleResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
@@ -216,18 +222,18 @@ function App() {
     <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: '#000', position: 'relative' }}>
       {showStart && (
         <div style={{
-          position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.9)',
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          justifyContent: 'center', color: 'white', zIndex: 100
+          position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 100,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white'
         }}>
           <h1>Minecraft 3D</h1>
-          <p>Tap screen to start playing</p>
+          <p>Tap anywhere to start playing</p>
           <p style={{ fontSize: '14px', marginTop: '20px' }}>WASD = Move • Mouse = Look • Left = Break • Right = Place</p>
         </div>
       )}
 
       <div ref={mountRef} style={{ width: '100%', height: '100%' }} />
 
+      {/* AI Chat Sidebar */}
       <div style={{
         position: 'absolute', right: 0, top: 0, bottom: 0, width: '260px',
         background: 'rgba(20,20,20,0.95)', padding: '12px', overflowY: 'auto', borderLeft: '1px solid #444'
