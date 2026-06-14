@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft 3D - AI Powered (Fusion)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; color: white; font-family: system-ui; }
+        #game { display: block; }
+        #ui { position: absolute; bottom: 0; left: 0; right: 0; padding: 15px; background: rgba(0,0,0,0.7); display: flex; gap: 10px; align-items: center; }
+        #chat { flex: 1; }
+        #chat-input { width: 100%; padding: 10px; font-size: 16px; border: none; border-radius: 6px; }
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; transform: translate(-50%, -50%); pointer-events: none; }
+        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: white; }
+        #crosshair::before { width: 2px; height: 20px; left: 9px; }
+        #crosshair::after { width: 20px; height: 2px; top: 9px; }
+        .instructions { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.6); padding: 12px; border-radius: 8px; font-size: 14px; max-width: 260px; }
+        #api-key-section { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.8); padding: 12px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <canvas id="game"></canvas>
+    
+    <div id="crosshair"></div>
+
+    <div class="instructions">
+        <strong>Controls</strong><br>
+        Click to lock mouse<br>
+        WASD = Move &nbsp;&nbsp; Space = Jump<br>
+        Left Click = Break block<br>
+        Right Click = Place block<br>
+        <br>
+        <small>Type in chat to use AI (Fusion)</small>
+    </div>
+
+    <div id="api-key-section">
+        <label style="font-size:13px">OpenRouter API Key (Fusion)</label><br>
+        <input type="password" id="api-key" placeholder="sk-or-..." style="width:280px; padding:6px; margin-top:4px;">
+        <button onclick="saveApiKey()" style="margin-left:6px; padding:6px 12px;">Save</button>
+    </div>
+
+    <div id="ui">
+        <div id="chat" style="flex:1">
+            <input type="text" id="chat-input" placeholder="Tell AI what to do... (e.g. build a tower here or generate trees)">
+        </div>
+    </div>
+
+    <script>
+        // ==================== THREE.JS SETUP ====================
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('game'), antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        // Lighting
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(10, 20, 10);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040));
+
+        // Simple ground
+        const groundGeo = new THREE.PlaneGeometry(100, 100);
+        const groundMat = new THREE.MeshLambertMaterial({ color: 0x4ade80 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        scene.add(ground);
+
+        // Some initial blocks (voxels)
+        const blocks = [];
+        function addBlock(x, y, z, color = 0x8B4513) {
+            const geo = new THREE.BoxGeometry(1, 1, 1);
+            const mat = new THREE.MeshLambertMaterial({ color });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z);
+            scene.add(mesh);
+            blocks.push(mesh);
+            return mesh;
+        }
+
+        // Generate simple starting structures
+        for (let i = -5; i <= 5; i++) {
+            for (let j = -5; j <= 5; j++) {
+                addBlock(i, 0, j, 0x4ade80); // grass layer
+            }
+        }
+        // Some dirt/stone pillars
+        for (let i = 0; i < 4; i++) {
+            addBlock(3 + i, 1, 2, 0xa16207);
+            addBlock(3 + i, 2, 2, 0x64748b);
+        }
+
+        camera.position.set(0, 3, 8);
+
+        // ==================== CONTROLS ====================
+        let move = { forward: false, backward: false, left: false, right: false };
+        let velocity = new THREE.Vector3();
+        let direction = new THREE.Vector3();
+        let yaw = 0, pitch = 0;
+        let isLocked = false;
+
+        const canvas = document.getElementById('game');
+
+        canvas.addEventListener('click', () => {
+            canvas.requestPointerLock();
+        });
+
+        document.addEventListener('pointerlockchange', () => {
+            isLocked = document.pointerLockElement === canvas;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isLocked) return;
+            yaw -= e.movementX * 0.002;
+            pitch -= e.movementY * 0.002;
+            pitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, pitch));
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'w') move.forward = true;
+            if (e.key.toLowerCase() === 's') move.backward = true;
+            if (e.key.toLowerCase() === 'a') move.left = true;
+            if (e.key.toLowerCase() === 'd') move.right = true;
+            if (e.key === ' ') { velocity.y = 0.3; e.preventDefault(); }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key.toLowerCase() === 'w') move.forward = false;
+            if (e.key.toLowerCase() === 's') move.backward = false;
+            if (e.key.toLowerCase() === 'a') move.left = false;
+            if (e.key.toLowerCase() === 'd') move.right = false;
+        });
+
+        // ==================== RAYCASTING FOR BLOCKS ====================
+        const raycaster = new THREE.Raycaster();
+        let selectedBlock = null;
+
+        function updateRaycast() {
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+            const intersects = raycaster.intersectObjects(blocks);
+            if (intersects.length > 0) {
+                selectedBlock = intersects[0].object;
+            } else {
+                selectedBlock = null;
+            }
+        }
+
+        // Break block (left click)
+        window.addEventListener('mousedown', (e) => {
+            if (!isLocked) return;
+            updateRaycast();
+            if (e.button === 0 && selectedBlock) { // Left click
+                scene.remove(selectedBlock);
+                const index = blocks.indexOf(selectedBlock);
+                if (index > -1) blocks.splice(index, 1);
+            }
+            if (e.button === 2 && selectedBlock) { // Right click - place new block in front
+                const pos = selectedBlock.position.clone();
+                const normal = raycaster.ray.direction.clone().negate();
+                pos.add(normal);
+                addBlock(Math.round(pos.x), Math.round(pos.y), Math.round(pos.z), 0x854d0e);
+            }
+        });
+
+        window.addEventListener('contextmenu', e => e.preventDefault());
+
+        // ==================== GAME LOOP ====================
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Movement
+            direction.z = Number(move.forward) - Number(move.backward);
+            direction.x = Number(move.right) - Number(move.left);
+            direction.normalize();
+
+            if (move.forward || move.backward) velocity.z = direction.z * 0.15;
+            if (move.left || move.right) velocity.x = direction.x * 0.15;
+
+            camera.position.x += velocity.x;
+            camera.position.z += velocity.z;
+
+            // Simple gravity / jump
+            velocity.y -= 0.015; // gravity
+            camera.position.y += velocity.y;
+
+            if (camera.position.y < 2) {
+                camera.position.y = 2;
+                velocity.y = 0;
+            }
+
+            // Apply look
+            camera.rotation.order = 'YXZ';
+            camera.rotation.y = yaw;
+            camera.rotation.x = pitch;
+
+            renderer.render(scene, camera);
+        }
+
+        // ==================== AI CHAT (Fusion ready) ====================
+        const chatInput = document.getElementById('chat-input');
+
+        function saveApiKey() {
+            const key = document.getElementById('api-key').value.trim();
+            if (key) {
+                localStorage.setItem('openrouter_api_key', key);
+                alert('API key saved! You can now use AI commands.');
+            }
+        }
+
+        // Load saved key
+        window.onload = () => {
+            const savedKey = localStorage.getItem('openrouter_api_key');
+            if (savedKey) {
+                document.getElementById('api-key').value = savedKey;
+            }
+            animate();
+        };
+
+        chatInput.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter' && chatInput.value.trim() !== '') {
+                const prompt = chatInput.value.trim();
+                chatInput.value = '';
+
+                const apiKey = localStorage.getItem('openrouter_api_key');
+                if (!apiKey) {
+                    alert('Please paste your OpenRouter API key first (top right).');
+                    return;
+                }
+
+                // For now: Show that it's ready for Fusion
+                // In next update I'll connect the real OpenRouter /fusion call
+                alert('AI command received: "' + prompt + '"
+\n(Real Fusion API integration coming in next push — paste your key and I\'ll wire it up!)');
+
+                // TODO: Call OpenRouter Fusion here with your key
+                // Example structure will be added once you confirm the key works
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
