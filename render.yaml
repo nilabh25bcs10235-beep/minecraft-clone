@@ -1,22 +1,14 @@
 services:
   - type: web
     name: mc3d-ai
-    runtime: java
-    region: oregon
+    runtime: python
     plan: free
     rootDir: backend
-    buildCommand: |
-      cd ../frontend && npm install && npm run build && \
-      mkdir -p ../backend/src/main/resources/static && \
-      rm -rf ../backend/src/main/resources/static/* && \
-      cp -r dist/. ../backend/src/main/resources/static/ && \
-      cd ../backend && ./mvnw clean package -DskipTests
-    startCommand: java -Dserver.port=$PORT -jar target/*.jar
-    healthCheckPath: /actuator/health
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
     envVars:
       - key: OPENROUTER_API_KEY
         sync: false
-      - key: JAVA_OPTS
-        value: "-Xmx512m -Xms256m"
       - key: PORT
         value: "10000"
