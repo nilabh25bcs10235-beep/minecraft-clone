@@ -1,0 +1,21 @@
+{
+  "name": "Minecraft 3D + AI",
+  "short_name": "MC3D AI",
+  "description": "3D Minecraft-like game with OpenRouter Fusion AI",
+  "start_url": "/index-3d.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192x192/3b82f6/ffffff?text=MC",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/512x512/3b82f6/ffffff?text=MC",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
