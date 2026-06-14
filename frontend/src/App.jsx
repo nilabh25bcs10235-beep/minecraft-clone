@@ -4,7 +4,7 @@ import * as THREE from 'three';
 function App() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const [backendUrl] = useState('https://mc3d-ai.onrender.com'); // ← CHANGE THIS to your actual Render URL
+  const [backendUrl] = useState('https://mc3d-ai.onrender.com');
 
   const sendMessage = async () => {
     if (!input.trim()) return;
