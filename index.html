@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft Clone - Browser Edition</title>
+    <style>
+        body {
+            margin: 0;
+            background: #1a1a2e;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        canvas {
+            border: 4px solid #4a90e2;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(74, 144, 226, 0.5);
+            image-rendering: pixelated;
+        }
+        .ui {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 12px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .hotbar {
+            display: flex;
+            gap: 6px;
+        }
+        .hotbar-item {
+            width: 48px;
+            height: 48px;
+            border: 3px solid #555;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .hotbar-item.selected {
+            border-color: #ffd700;
+            box-shadow: 0 0 15px #ffd700;
+            transform: scale(1.1);
+        }
+        .instructions {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.75);
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 280px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .crosshair::before, .crosshair::after {
+            content: '';
+            position: absolute;
+            background: white;
+            opacity: 0.8;
+        }
+        .crosshair::before { width: 2px; height: 20px; left: 9px; }
+        .crosshair::after { width: 20px; height: 2px; top: 9px; }
+        h1 { margin: 10px 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body>
+    <h1>🌲 Mini Minecraft</h1>
+    <canvas id="game" width="800" height="600"></canvas>
+    
+    <div class="instructions">
+        <strong>Controls</strong><br>
+        WASD / Arrows: Move<br>
+        Left Click: Break block<br>
+        Right Click: Place block<br>
+        1-6: Select block type<br>
+        <br>
+        <small>Click canvas to focus. Build your world!</small>
+    </div>
+
+    <div class="ui">
+        <div class="hotbar" id="hotbar"></div>
+    </div>
+
+    <div class="crosshair"></div>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+
+        const TILE_SIZE = 32;
+        const WORLD_WIDTH = 40;
+        const WORLD_HEIGHT = 30;
+
+        let world = [];
+        let player = { x: 10 * TILE_SIZE, y: 10 * TILE_SIZE, size: 24 };
+        let keys = {};
+        let selectedBlock = 0;
+
+        const BLOCK_TYPES = [
+            { name: 'Grass', color: '#4ade80' },
+            { name: 'Dirt', color: '#a16207' },
+            { name: 'Stone', color: '#64748b' },
+            { name: 'Sand', color: '#facc15' },
+            { name: 'Wood', color: '#854d0e' },
+            { name: 'Water', color: '#3b82f6' }
+        ];
+
+        function generateWorld() {
+            world = [];
+            for (let y = 0; y < WORLD_HEIGHT; y++) {
+                world[y] = [];
+                for (let x = 0; x < WORLD_WIDTH; x++) {
+                    // Simple terrain generation
+                    if (y < 18) {
+                        world[y][x] = -1; // Air
+                    } else if (y < 20) {
+                        world[y][x] = 0; // Grass
+                    } else if (y < 23) {
+                        world[y][x] = 1; // Dirt
+                    } else {
+                        world[y][x] = 2; // Stone
+                    }
+                    
+                    // Add some stone patches
+                    if (y > 18 && Math.random() < 0.15) {
+                        world[y][x] = 2;
+                    }
+                    // Add some trees (wood on top of grass)
+                    if (y === 17 && world[y+1][x] === 0 && Math.random() < 0.08) {
+                        world[y][x] = 4; // Wood
+                    }
+                }
+            }
+        }
+
+        function drawWorld() {
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const offsetX = Math.floor(player.x / TILE_SIZE) - Math.floor(canvas.width / 2 / TILE_SIZE);
+            const offsetY = Math.floor(player.y / TILE_SIZE) - Math.floor(canvas.height / 2 / TILE_SIZE);
+
+            for (let y = 0; y < WORLD_HEIGHT; y++) {
+                for (let x = 0; x < WORLD_WIDTH; x++) {
+                    const block = world[y][x];
+                    if (block === -1) continue;
+
+                    const screenX = (x - offsetX) * TILE_SIZE;
+                    const screenY = (y - offsetY) * TILE_SIZE;
+
+                    if (screenX < -TILE_SIZE || screenX > canvas.width || screenY < -TILE_SIZE || screenY > canvas.height) continue;
+
+                    ctx.fillStyle = BLOCK_TYPES[block].color;
+                    ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+
+                    // Simple border for voxel feel
+                    ctx.strokeStyle = '#1e2937';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                }
+            }
+
+            // Draw player
+            const playerScreenX = canvas.width / 2 - player.size / 2;
+            const playerScreenY = canvas.height / 2 - player.size / 2;
+            ctx.fillStyle = '#ec4899';
+            ctx.fillRect(playerScreenX, playerScreenY, player.size, player.size);
+            ctx.strokeStyle = '#be185d';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(playerScreenX, playerScreenY, player.size, player.size);
+        }
+
+        function updatePlayer() {
+            const speed = 4;
+            let dx = 0, dy = 0;
+
+            if (keys['w'] || keys['arrowup']) dy -= speed;
+            if (keys['s'] || keys['arrowdown']) dy += speed;
+            if (keys['a'] || keys['arrowleft']) dx -= speed;
+            if (keys['d'] || keys['arrowright']) dx += speed;
+
+            // Simple collision (prevent walking through blocks)
+            const newX = player.x + dx;
+            const newY = player.y + dy;
+
+            const tileX = Math.floor(newX / TILE_SIZE);
+            const tileY = Math.floor(newY / TILE_SIZE);
+
+            if (tileX >= 0 && tileX < WORLD_WIDTH && tileY >= 0 && tileY < WORLD_HEIGHT) {
+                if (world[tileY][tileX] === -1 || world[tileY][tileX] === 5) { // Air or Water
+                    player.x = newX;
+                    player.y = newY;
+                }
+            } else {
+                player.x = newX;
+                player.y = newY;
+            }
+
+            // Keep player in world bounds
+            player.x = Math.max(0, Math.min(player.x, WORLD_WIDTH * TILE_SIZE - player.size));
+            player.y = Math.max(0, Math.min(player.y, WORLD_HEIGHT * TILE_SIZE - player.size));
+        }
+
+        function getTileAtWorldPos(worldX, worldY) {
+            const tx = Math.floor(worldX / TILE_SIZE);
+            const ty = Math.floor(worldY / TILE_SIZE);
+            if (tx < 0 || tx >= WORLD_WIDTH || ty < 0 || ty >= WORLD_HEIGHT) return -1;
+            return { x: tx, y: ty, type: world[ty][tx] };
+        }
+
+        function breakBlock(worldX, worldY) {
+            const tile = getTileAtWorldPos(worldX, worldY);
+            if (!tile || tile.type === -1) return;
+
+            // Only break if close to player
+            const distX = Math.abs(tile.x * TILE_SIZE - player.x);
+            const distY = Math.abs(tile.y * TILE_SIZE - player.y);
+            if (distX > TILE_SIZE * 2 || distY > TILE_SIZE * 2) return;
+
+            world[tile.y][tile.x] = -1; // Set to air
+        }
+
+        function placeBlock(worldX, worldY) {
+            const tile = getTileAtWorldPos(worldX, worldY);
+            if (!tile) return;
+
+            const distX = Math.abs(tile.x * TILE_SIZE - player.x);
+            const distY = Math.abs(tile.y * TILE_SIZE - player.y);
+            if (distX > TILE_SIZE * 2 || distY > TILE_SIZE * 2) return;
+
+            // Place on adjacent empty? For simplicity, replace if air or different
+            if (tile.type === -1) {
+                world[tile.y][tile.x] = selectedBlock;
+            }
+        }
+
+        function drawHotbar() {
+            const hotbar = document.getElementById('hotbar');
+            hotbar.innerHTML = '';
+
+            BLOCK_TYPES.forEach((block, index) => {
+                const div = document.createElement('div');
+                div.className = 'hotbar-item' + (index === selectedBlock ? ' selected' : '');
+                div.style.backgroundColor = block.color;
+                div.innerHTML = `<span style="color:white; text-shadow:1px 1px 2px black; font-size:12px;">${block.name}</span>`;
+                div.onclick = () => {
+                    selectedBlock = index;
+                    drawHotbar();
+                };
+                hotbar.appendChild(div);
+            });
+        }
+
+        function gameLoop() {
+            updatePlayer();
+            drawWorld();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function setupControls() {
+            window.addEventListener('keydown', e => {
+                keys[e.key.toLowerCase()] = true;
+                
+                // Number keys for hotbar
+                if (e.key >= '1' && e.key <= '6') {
+                    selectedBlock = parseInt(e.key) - 1;
+                    drawHotbar();
+                }
+            });
+
+            window.addEventListener('keyup', e => {
+                keys[e.key.toLowerCase()] = false;
+            });
+
+            canvas.addEventListener('mousedown', e => {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+
+                // Convert screen mouse to world position
+                const worldMouseX = player.x + (mouseX - canvas.width / 2);
+                const worldMouseY = player.y + (mouseY - canvas.height / 2);
+
+                if (e.button === 0) { // Left click - break
+                    breakBlock(worldMouseX, worldMouseY);
+                } else if (e.button === 2) { // Right click - place
+                    e.preventDefault();
+                    placeBlock(worldMouseX, worldMouseY);
+                }
+            });
+
+            canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+            // Prevent arrow keys from scrolling
+            window.addEventListener('keydown', e => {
+                if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                    e.preventDefault();
+                }
+            });
+        }
+
+        function init() {
+            generateWorld();
+            drawHotbar();
+            setupControls();
+            
+            // Center player in a nice starting spot
+            player.x = 15 * TILE_SIZE;
+            player.y = 16 * TILE_SIZE;
+
+            // Start game loop
+            gameLoop();
+
+            // Initial draw
+            drawWorld();
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
