@@ -1,31 +1,45 @@
-# 🌲 Minecraft 3D + AI (Fusion)
+# 🌲 Minecraft 3D + AI (Full Stack)
 
-A first-person 3D Minecraft-like game with **OpenRouter Fusion AI** integration.
+**React (Vite) + Three.js** frontend  
+**Java Spring Boot** backend  
+**OpenRouter Fusion** AI integration
 
-## Play Online
-Open `index-3d.html` in any browser.
+## Project Structure
 
-## Install as App (PWA)
-1. Open the deployed link
-2. Click the install icon in the address bar (or "Add to Home Screen" on mobile)
-3. It installs as a standalone app
+```
+minecraft-clone/
+├── frontend/          # React + Vite + Three.js
+├── backend/           # Java Spring Boot
+└── README.md
+```
 
-## Deploy as Installable App
-- Recommended: Deploy to **Vercel** (free & easy)
-- Connect this GitHub repo to Vercel
-- It will be a proper Progressive Web App (PWA)
+## Tech Stack
+- **Frontend**: React 18 + Vite + Three.js
+- **Backend**: Java 17+ + Spring Boot 3
+- **AI**: OpenRouter Fusion (via backend)
 
-## Controls
-- Click to lock mouse
-- WASD = Move
-- Space = Jump
-- Left Click = Break blocks
-- Right Click = Place blocks
-- Bottom chat = Talk to Fusion AI
+## Running Locally
 
-## AI Feature
-Paste your OpenRouter API key (top right) to use natural language commands with Fusion.
+### Backend
+```bash
+cd backend
+./mvnw spring-boot:run
+```
 
----
+### Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-Built with Three.js + OpenRouter Fusion
+Frontend runs on `http://localhost:5173` and proxies API calls to backend.
+
+## Deployment on Render
+- Frontend → Static Site
+- Backend → Web Service
+
+## Future Plans
+- Move Three.js game fully into React
+- Add user accounts / world saving
+- Improve AI command execution (build structures from chat)
