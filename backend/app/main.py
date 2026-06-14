@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 import os
 import requests
-from pydantic import BaseModel
 
 app = FastAPI(title="MC3D AI Backend")
 
@@ -20,7 +21,7 @@ class ChatRequest(BaseModel):
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 @app.get("/api/health")
-async def health():
+def health():
     return {"status": "healthy"}
 
 @app.post("/api/ai/chat")
@@ -40,7 +41,7 @@ async def chat_with_fusion(request: ChatRequest):
             json={
                 "model": "openrouter/fusion",
                 "messages": [
-                    {"role": "system", "content": "You are a helpful Minecraft AI assistant. Help the player with building, commands, and ideas."},
+                    {"role": "system", "content": "You are a helpful Minecraft AI assistant. Help the player build things in the game."},
                     {"role": "user", "content": request.message}
                 ]
             }
@@ -50,3 +51,10 @@ async def chat_with_fusion(request: ChatRequest):
         return {"reply": reply}
     except Exception as e:
         return {"reply": f"Error: {str(e)}"}
+
+# Serve the React frontend (must be last)
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=10000)
