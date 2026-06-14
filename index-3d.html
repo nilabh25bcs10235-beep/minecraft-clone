@@ -8,45 +8,110 @@
     <style>
         body { margin: 0; overflow: hidden; background: #000; color: white; font-family: system-ui; }
         #game { display: block; }
-        #ui { position: absolute; bottom: 0; left: 0; right: 0; padding: 15px; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; gap: 8px; }
+        #tutorial {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.95); display: flex; align-items: center; justify-content: center; z-index: 100;
+        }
+        .tutorial-box {
+            background: #1e2937; padding: 40px; border-radius: 16px; max-width: 620px; width: 90%;
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.4);
+        }
+        .tutorial-box h1 { margin-top: 0; color: #60a5fa; }
+        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 25px 0; }
+        .control-item { background: #334155; padding: 14px; border-radius: 10px; }
+        .control-item strong { color: #f59e0b; }
+        #ui { position: absolute; bottom: 0; left: 0; right: 0; padding: 15px; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; gap: 8px; z-index: 10; }
         #chat-log { max-height: 120px; overflow-y: auto; font-size: 14px; margin-bottom: 8px; }
         #chat-input { width: 100%; padding: 10px; font-size: 16px; border: none; border-radius: 6px; }
-        #crosshair { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; transform: translate(-50%, -50%); pointer-events: none; z-index: 10; }
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; transform: translate(-50%, -50%); pointer-events: none; z-index: 5; }
         #crosshair::before, #crosshair::after { content: ''; position: absolute; background: #fff; }
         #crosshair::before { width: 2px; height: 20px; left: 9px; }
         #crosshair::after { width: 20px; height: 2px; top: 9px; }
         .instructions { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.6); padding: 12px; border-radius: 8px; font-size: 14px; max-width: 280px; z-index: 5; }
         #api-key-section { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.85); padding: 12px; border-radius: 8px; z-index: 5; }
-        .ai-response { background: #1f2937; padding: 8px 12px; border-radius: 6px; margin-top: 4px; }
     </style>
 </head>
 <body>
+    <!-- TUTORIAL SCREEN -->
+    <div id="tutorial">
+        <div class="tutorial-box">
+            <h1>🌲 Welcome to 3D Minecraft + AI</h1>
+            <p style="font-size:15px; color:#cbd5e1; margin-bottom:25px;">
+                A first-person voxel world powered by <strong>Three.js</strong> and <strong>OpenRouter Fusion</strong> AI.
+            </p>
+
+            <div class="controls-grid">
+                <div class="control-item">
+                    <strong>Mouse</strong><br>
+                    Move mouse to look around<br>
+                    <small>Click game to lock cursor</small>
+                </div>
+                <div class="control-item">
+                    <strong>WASD / Arrows</strong><br>
+                    Move forward, left, back, right
+                </div>
+                <div class="control-item">
+                    <strong>Space</strong><br>
+                    Jump
+                </div>
+                <div class="control-item">
+                    <strong>Left Click</strong><br>
+                    Break the block you're looking at
+                </div>
+                <div class="control-item">
+                    <strong>Right Click</strong><br>
+                    Place the selected block type
+                </div>
+                <div class="control-item">
+                    <strong>Chat Box (bottom)</strong><br>
+                    Type commands for <strong>Fusion AI</strong><br>
+                    <small>Example: "build a tower here"</small>
+                </div>
+            </div>
+
+            <div style="background:#334155; padding:16px; border-radius:10px; margin:20px 0;">
+                <strong style="color:#60a5fa">🤖 AI Feature (Fusion)</strong><br>
+                <span style="font-size:14px; color:#e2e8f0;">
+                    Paste your OpenRouter API key (top right) → Type anything in the chat box.<br>
+                    Fusion can help you build, explore, or give ideas.
+                </span>
+            </div>
+
+            <button onclick="startGame()" 
+                    style="background:#3b82f6; color:white; border:none; padding:14px 40px; font-size:18px; border-radius:10px; cursor:pointer; width:100%; margin-top:10px;">
+                Start Playing →
+            </button>
+
+            <p style="text-align:center; font-size:12px; color:#64748b; margin-top:15px;">
+                You can reopen this tutorial anytime by refreshing the page.
+            </p>
+        </div>
+    </div>
+
     <canvas id="game"></canvas>
     
-    <div id="crosshair"></div>
+    <div id="crosshair" style="display:none;"></div>
 
-    <div class="instructions">
-        <strong>3D Minecraft + AI (Fusion)</strong><br>
-        Click to lock mouse<br>
+    <div class="instructions" style="display:none;">
+        <strong>Controls</strong><br>
         WASD = Move &nbsp; Space = Jump<br>
         Left Click = Break &nbsp; Right Click = Place<br>
-        <br>
-        Type commands in chat below to use <strong>Fusion AI</strong>
+        Chat at bottom for AI
     </div>
 
-    <div id="api-key-section">
-        <label style="font-size:13px; display:block; margin-bottom:4px;">OpenRouter API Key (for Fusion)</label>
+    <div id="api-key-section" style="display:none;">
+        <label style="font-size:13px; display:block; margin-bottom:4px;">OpenRouter API Key (Fusion)</label>
         <input type="password" id="api-key" placeholder="sk-or-..." style="width:260px; padding:6px;">
-        <button onclick="saveApiKey()" style="margin-left:6px; padding:6px 12px; cursor:pointer;">Save Key</button>
+        <button onclick="saveApiKey()" style="margin-left:6px; padding:6px 12px; cursor:pointer;">Save</button>
     </div>
 
-    <div id="ui">
+    <div id="ui" style="display:none;">
         <div id="chat-log"></div>
-        <input type="text" id="chat-input" placeholder="Ask Fusion AI... (e.g. build a tower or generate trees)">
+        <input type="text" id="chat-input" placeholder="Tell Fusion what to do... (e.g. build a tower)">
     </div>
 
     <script>
-        // ==================== THREE.JS 3D SETUP ====================
+        // ==================== THREE.JS SETUP ====================
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('game'), antialias: true });
@@ -75,11 +140,8 @@
             return mesh;
         }
 
-        // Simple starting area
         for (let x = -8; x <= 8; x++) {
-            for (let z = -8; z <= 8; z++) {
-                addBlock(x, 0, z, 0x4ade80);
-            }
+            for (let z = -8; z <= 8; z++) addBlock(x, 0, z, 0x4ade80);
         }
         for (let i = 0; i < 5; i++) {
             addBlock(4, 1, 3 + i, 0xa16207);
@@ -88,14 +150,18 @@
 
         camera.position.set(0, 4, 10);
 
-        // ==================== FIRST-PERSON CONTROLS ====================
+        // ==================== CONTROLS ====================
         let move = { forward: false, backward: false, left: false, right: false };
         let velocity = new THREE.Vector3();
         let yaw = 0, pitch = 0;
         let isLocked = false;
         const canvasEl = document.getElementById('game');
 
-        canvasEl.addEventListener('click', () => canvasEl.requestPointerLock());
+        function lockPointer() {
+            canvasEl.requestPointerLock();
+        }
+
+        canvasEl.addEventListener('click', lockPointer);
 
         document.addEventListener('pointerlockchange', () => {
             isLocked = document.pointerLockElement === canvasEl;
@@ -127,7 +193,6 @@
 
         // ==================== RAYCASTING ====================
         const raycaster = new THREE.Raycaster();
-        let targetedBlock = null;
 
         function getTargetedBlock() {
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
@@ -140,13 +205,12 @@
             const hit = getTargetedBlock();
             if (!hit) return;
 
-            if (e.button === 0) { // Left click - break
+            if (e.button === 0) {
                 scene.remove(hit.object);
                 const idx = blocks.indexOf(hit.object);
                 if (idx !== -1) blocks.splice(idx, 1);
             }
-
-            if (e.button === 2) { // Right click - place
+            if (e.button === 2) {
                 const pos = hit.object.position.clone();
                 const normal = hit.face.normal.clone();
                 pos.add(normal);
@@ -160,7 +224,7 @@
             requestAnimationFrame(animate);
 
             const speed = 0.12;
-            direction = new THREE.Vector3();
+            let direction = new THREE.Vector3();
             if (move.forward) direction.z -= 1;
             if (move.backward) direction.z += 1;
             if (move.left) direction.x -= 1;
@@ -184,7 +248,7 @@
             renderer.render(scene, camera);
         }
 
-        // ==================== FUSION AI ENDPOINT ====================
+        // ==================== FUSION AI ====================
         const chatLog = document.getElementById('chat-log');
         const chatInput = document.getElementById('chat-input');
 
@@ -202,63 +266,51 @@
             const keyInput = document.getElementById('api-key');
             if (keyInput.value.trim()) {
                 localStorage.setItem('openrouter_api_key', keyInput.value.trim());
-                alert('API key saved locally. Fusion is ready!');
+                alert('API key saved! Fusion is ready.');
             }
         }
 
         async function callFusionAI(userPrompt) {
             const apiKey = localStorage.getItem('openrouter_api_key');
             if (!apiKey) {
-                alert('Please save your OpenRouter API key first (top right).');
+                alert('Please save your OpenRouter API key first.');
                 return;
             }
 
             addToChatLog(userPrompt, false);
 
-            const thinkingDiv = document.createElement('div');
-            thinkingDiv.innerHTML = `<strong style="color:#60a5fa">Fusion:</strong> <em>Thinking...</em>`;
-            chatLog.appendChild(thinkingDiv);
-            chatLog.scrollTop = chatLog.scrollHeight;
+            const thinking = document.createElement('div');
+            thinking.innerHTML = `<strong style="color:#60a5fa">Fusion:</strong> <em>Thinking with Fusion...</em>`;
+            chatLog.appendChild(thinking);
 
             try {
-                const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json',
-                        'HTTP-Referer': 'https://github.com/nilabh25bcs10235-beep/minecraft-clone',
-                        'X-Title': 'Minecraft 3D + Fusion AI'
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         model: 'openrouter/fusion',
                         messages: [
-                            {
-                                role: 'system',
-                                content: 'You are a helpful AI assistant inside a 3D Minecraft-like game. The player can give you commands to build, explore, or get information. Keep responses short and actionable.'
-                            },
-                            {
-                                role: 'user',
-                                content: userPrompt
-                            }
+                            { role: 'system', content: 'You are a helpful AI inside a 3D Minecraft game. Keep answers short and useful for building or exploring.' },
+                            { role: 'user', content: userPrompt }
                         ],
                         max_tokens: 300
                     })
                 });
 
-                const data = await response.json();
-                thinkingDiv.remove();
+                const data = await res.json();
+                thinking.remove();
 
                 if (data.choices && data.choices[0]) {
-                    const aiText = data.choices[0].message.content;
-                    addToChatLog(aiText, true);
-
-                    // Future: We can parse aiText to actually build things in the world
+                    addToChatLog(data.choices[0].message.content, true);
                 } else {
-                    addToChatLog('Sorry, Fusion did not return a proper response.', true);
+                    addToChatLog('Fusion did not return a response.', true);
                 }
             } catch (err) {
-                thinkingDiv.remove();
-                addToChatLog('Error calling Fusion: ' + err.message, true);
+                thinking.remove();
+                addToChatLog('Error: ' + err.message, true);
             }
         }
 
@@ -270,11 +322,25 @@
             }
         });
 
-        // Load saved key on start
+        // ==================== START GAME ====================
+        function startGame() {
+            document.getElementById('tutorial').style.display = 'none';
+            document.getElementById('crosshair').style.display = 'block';
+            document.querySelector('.instructions').style.display = 'block';
+            document.getElementById('api-key-section').style.display = 'block';
+            document.getElementById('ui').style.display = 'flex';
+
+            // Load saved key
+            const savedKey = localStorage.getItem('openrouter_api_key');
+            if (savedKey) document.getElementById('api-key').value = savedKey;
+
+            animate();
+        }
+
+        // Auto-load key if exists (for when refreshing after tutorial)
         window.onload = () => {
             const saved = localStorage.getItem('openrouter_api_key');
             if (saved) document.getElementById('api-key').value = saved;
-            animate();
         };
 
         window.addEventListener('resize', () => {
