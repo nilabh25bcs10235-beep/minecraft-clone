@@ -16,7 +16,7 @@ services:
         value: "-Xmx512m -Xms256m"
 
   # Frontend - React + Vite
-  - type: static_site
+  - type: static
     name: mc3d-ai-frontend
     env: static
     region: oregon
